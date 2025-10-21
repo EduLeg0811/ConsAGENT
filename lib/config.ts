@@ -74,7 +74,7 @@ export const STARTER_PROMPTS: StartScreenPrompt[] = [
   },
 
   {
-    label: "Analise meu verbete (adicione o arquivo no símbolo '+', na parte inferior esquerda).",
+    label: "Analise meu verbete (adicione o arquivo no símbolo '+' à esquerda).",
     prompt: "Analise meu verbete e dê sugestões de melhoria, de acordo com a base de dados da Enciclopédia da Cosncienciologia.",
     icon: "book-open",
   },
