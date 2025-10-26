@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChatKitPanel, type FactAction } from "@/components/ChatKitPanel";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
@@ -19,34 +19,95 @@ export default function App() {
     }
   }, []);
 
+  const [quickPrompt, setQuickPrompt] = useState<string | null>(null);
+
+  const sendPrompt = (text: string) => setQuickPrompt(text);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-end bg-slate-100 dark:bg-slate-950">
-      <div className="mx-auto w-full max-w-5xl">
-        {/* Botão Home acima do container do chatbot */}
-        <div className="mb-3 flex justify-start">
+    <main className="flex min-h-screen pb-[env(safe-area-inset-bottom)] bg-slate-100 dark:bg-slate-950">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
+        <div className="flex items-center gap-3 p-4">
           <a
             href="https://cons-ia.org"
             title="Ir para a página inicial Cons-IA"
             aria-label="Ir para a página inicial Cons-IA"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-black via-slate-950 to-slate-900 text-white shadow-sm ring-1 ring-blue-400/20 transition-all hover:ring-blue-500/30 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300/30 dark:from-black dark:via-slate-950 dark:to-slate-900 dark:ring-blue-500/20 dark:hover:ring-blue-500/30"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-black via-slate-950 to-slate-900 text-white shadow-sm ring-1 ring-blue-400/20"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-5 w-5"
-              aria-hidden="true"
-            >
-              <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8 8a.75.75 0 1 1-1.06 1.06l-.47-.47V19.5A2.25 2.25 0 0 1 16.75 21h-2.5a.75.75 0 0 1-.75-.75v-3a1.5 1.5 0 0 0-3 0v3a.75.75 0 0 1-.75.75h-2.5A2.25 2.25 0 0 1 4 19.5v-7.07l-.47.47a.75.75 0 1 1-1.06-1.06l8-8Z" />
-            </svg>
+            <img
+              src="/favicon.png"
+              alt="Cons-IA"
+              className="h-6 w-6"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.src.endsWith('/favicon.png')) {
+                  img.src = '/favicon.ico';
+                }
+              }}
+            />
           </a>
+          <span className="text-lg font-semibold tracking-wide text-slate-900 dark:text-slate-100">
+            ConsAGENT
+          </span>
         </div>
-        <ChatKitPanel
-          theme={scheme}
-          onWidgetAction={handleWidgetAction}
-          onResponseEnd={handleResponseEnd}
-          onThemeRequest={setScheme}
-        />
+        <div className="px-4">
+          <hr className="my-3 border-slate-200 dark:border-slate-800" />
+        </div>
+        <nav className="flex flex-col gap-3 p-4">
+          <button
+            onClick={() => sendPrompt("Sou iniciante na Conscienciologia")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900/40 dark:hover:bg-cyan-900/60 transition-colors"
+          >
+            Sou Iniciante
+          </button>
+          <button
+            onClick={() => sendPrompt("Liste os documentos que você possui na base de dados vetorial")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-900/60 transition-colors"
+          >
+            Lista Fontes
+          </button>
+          <button
+            onClick={() => sendPrompt("busca em arquivos")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 transition-colors"
+          >
+            Busca Termo
+          </button>
+          <button
+            onClick={() => sendPrompt("analise verbete")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:hover:bg-emerald-900/60 transition-colors"
+          >
+            Analisa Texto
+          </button>
+          <button
+            onClick={() => sendPrompt("escreve verbete")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900/40 dark:hover:bg-sky-900/60 transition-colors"
+          >
+            Escreve Texto
+          </button>
+          <button
+            onClick={() => sendPrompt("Defina um termo")}
+            className="rounded-md px-3 py-2 text-sm font-medium text-slate-800 dark:text-slate-100 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/40 dark:hover:bg-yellow-900/60 transition-colors"
+          >
+            Cria Definologia
+          </button>
+        </nav>
+        <div className="px-4">
+          <hr className="my-2 border-slate-200 dark:border-slate-800" />
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1">
+        <div className="mx-auto w-full max-w-5xl p-4">
+          <ChatKitPanel
+            theme={scheme}
+            onWidgetAction={handleWidgetAction}
+            onResponseEnd={handleResponseEnd}
+            onThemeRequest={setScheme}
+            quickPrompt={quickPrompt}
+            onQuickPromptConsumed={() => setQuickPrompt(null)}
+          />
+        </div>
       </div>
     </main>
   );

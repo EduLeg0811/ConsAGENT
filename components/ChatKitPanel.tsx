@@ -24,6 +24,8 @@ type ChatKitPanelProps = {
   onWidgetAction: (action: FactAction) => Promise<void>;
   onResponseEnd: () => void;
   onThemeRequest: (scheme: ColorScheme) => void;
+  quickPrompt?: string | null;
+  onQuickPromptConsumed?: () => void;
 };
 
 type ErrorState = {
@@ -48,6 +50,8 @@ export function ChatKitPanel({
   onWidgetAction,
   onResponseEnd,
   onThemeRequest,
+  quickPrompt,
+  onQuickPromptConsumed,
 }: ChatKitPanelProps) {
   const processedFacts = useRef(new Set<string>());
   const [errors, setErrors] = useState<ErrorState>(() => createInitialErrors());
@@ -330,6 +334,24 @@ export function ChatKitPanel({
     },
   });
 
+  // Handle quick prompts sent from the sidebar
+  useEffect(() => {
+    if (!quickPrompt) return;
+    const text = quickPrompt as string;
+    const run = async () => {
+      try {
+        await chatkit.focusComposer?.();
+        await chatkit.setComposerValue?.({ text });
+        await chatkit.sendUserMessage?.({ text });
+      } catch (err) {
+        console.error("Failed to send quick prompt", err);
+      } finally {
+        onQuickPromptConsumed?.();
+      }
+    };
+    void run();
+  }, [quickPrompt, chatkit, onQuickPromptConsumed]);
+
   const activeError = errors.session ?? errors.integration;
   const blockingError = errors.script ?? activeError;
 
@@ -344,7 +366,7 @@ export function ChatKitPanel({
   }
 
   return (
-    <div className="relative pb-8 flex h-[90vh] w-full rounded-2xl flex-col overflow-hidden bg-white shadow-sm transition-colors dark:bg-slate-900">
+    <div className="relative pb-[calc(env(safe-area-inset-bottom)+2rem)] flex min-h-[90svh] w-full rounded-2xl flex-col overflow-hidden bg-white shadow-sm transition-colors dark:bg-slate-900">
       <ChatKit
         key={widgetInstanceKey}
         control={chatkit.control}
