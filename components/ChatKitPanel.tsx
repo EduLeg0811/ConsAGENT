@@ -84,8 +84,14 @@ export function ChatKitPanel({
     let timeoutId: number | undefined;
 
     const handleLoaded = () => {
+      if (isDev) {
+        console.info("[ChatKitPanel] chatkit-script-loaded event received");
+      }
       if (!isMountedRef.current) {
         return;
+      }
+      if (isDev) {
+        console.info("[ChatKitPanel] scriptStatus -> ready");
       }
       setScriptStatus("ready");
       setErrorState({ script: null });
@@ -95,6 +101,9 @@ export function ChatKitPanel({
       console.error("Failed to load chatkit.js for some reason", event);
       if (!isMountedRef.current) {
         return;
+      }
+      if (isDev) {
+        console.info("[ChatKitPanel] scriptStatus -> error");
       }
       setScriptStatus("error");
       const detail = (event as CustomEvent<unknown>)?.detail ?? "unknown error";
@@ -109,8 +118,14 @@ export function ChatKitPanel({
     );
 
     if (window.customElements?.get("openai-chatkit")) {
+      if (isDev) {
+        console.info("[ChatKitPanel] openai-chatkit already registered");
+      }
       handleLoaded();
     } else if (scriptStatus === "pending") {
+      if (isDev) {
+        console.info("[ChatKitPanel] waiting for chatkit script up to 5s...");
+      }
       timeoutId = window.setTimeout(() => {
         if (!window.customElements?.get("openai-chatkit")) {
           handleError(
@@ -141,6 +156,9 @@ export function ChatKitPanel({
 
   useEffect(() => {
     if (!isWorkflowConfigured && isMountedRef.current) {
+      if (isDev) {
+        console.warn("[ChatKitPanel] Missing workflow id. Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID.");
+      }
       setErrorState({
         session: "Set NEXT_PUBLIC_CHATKIT_WORKFLOW_ID in your .env.local file.",
         retryable: false,
@@ -152,6 +170,9 @@ export function ChatKitPanel({
   const handleResetChat = useCallback(() => {
     processedFacts.current.clear();
     if (isBrowser) {
+      if (isDev) {
+        console.info("[ChatKitPanel] reset chat triggered; clearing processed facts and resetting script status");
+      }
       setScriptStatus(
         window.customElements?.get("openai-chatkit") ? "ready" : "pending"
       );
@@ -183,12 +204,18 @@ export function ChatKitPanel({
 
       if (isMountedRef.current) {
         if (!currentSecret) {
+          if (isDev) {
+            console.info("[ChatKitPanel] starting session initialization");
+          }
           setIsInitializingSession(true);
         }
         setErrorState({ session: null, integration: null, retryable: false });
       }
 
       try {
+        if (isDev) {
+          console.info("[ChatKitPanel] POST", CREATE_SESSION_ENDPOINT);
+        }
         const response = await fetch(CREATE_SESSION_ENDPOINT, {
           method: "POST",
           headers: {
@@ -238,6 +265,9 @@ export function ChatKitPanel({
 
         const clientSecret = data?.client_secret as string | undefined;
         if (!clientSecret) {
+          if (isDev) {
+            console.error("[ChatKitPanel] Missing client_secret in create-session response");
+          }
           throw new Error("Missing client secret in response");
         }
 
@@ -258,6 +288,9 @@ export function ChatKitPanel({
         throw error instanceof Error ? error : new Error(detail);
       } finally {
         if (isMountedRef.current && !currentSecret) {
+          if (isDev) {
+            console.info("[ChatKitPanel] session initialization finished");
+          }
           setIsInitializingSession(false);
         }
       }
@@ -319,12 +352,21 @@ export function ChatKitPanel({
       return { success: false };
     },
     onResponseEnd: () => {
+      if (isDev) {
+        console.info("[ChatKitPanel] onResponseEnd");
+      }
       onResponseEnd();
     },
     onResponseStart: () => {
+      if (isDev) {
+        console.info("[ChatKitPanel] onResponseStart");
+      }
       setErrorState({ integration: null, retryable: false });
     },
     onThreadChange: () => {
+      if (isDev) {
+        console.info("[ChatKitPanel] onThreadChange -> clearing processed facts");
+      }
       processedFacts.current.clear();
     },
     onError: ({ error }: { error: unknown }) => {
@@ -340,9 +382,22 @@ export function ChatKitPanel({
     const text = quickPrompt as string;
     const run = async () => {
       try {
+        if (isDev) {
+          console.info("[ChatKitPanel] sending quick prompt", { text });
+        }
+        if (!chatkit.focusComposer || !chatkit.setComposerValue || !chatkit.sendUserMessage) {
+          console.warn("[ChatKitPanel] chatkit methods unavailable", {
+            hasFocus: Boolean(chatkit.focusComposer),
+            hasSetValue: Boolean(chatkit.setComposerValue),
+            hasSend: Boolean(chatkit.sendUserMessage),
+          });
+        }
         await chatkit.focusComposer?.();
         await chatkit.setComposerValue?.({ text });
         await chatkit.sendUserMessage?.({ text });
+        if (isDev) {
+          console.info("[ChatKitPanel] quick prompt sent");
+        }
       } catch (err) {
         console.error("Failed to send quick prompt", err);
       } finally {
@@ -372,8 +427,15 @@ export function ChatKitPanel({
         control={chatkit.control}
         className={
           blockingError || isInitializingSession
-            ? "pointer-events-none opacity-0"
-            : "block h-full w-full"
+            ? (console.info(
+                "[ChatKitPanel] ChatKit hidden due to",
+                {
+                  blockingError,
+                  isInitializingSession,
+                }
+              ),
+              "pointer-events-none opacity-0")
+            : (console.info("[ChatKitPanel] ChatKit visible"), "block h-full w-full")
         }
       />
       <ErrorOverlay

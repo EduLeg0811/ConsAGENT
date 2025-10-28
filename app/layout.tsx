@@ -1,4 +1,4 @@
-import Script from "next/script";
+import ChatkitScript from "./ChatkitScript";
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -15,10 +15,7 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <head>
-        <Script
-          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
-          strategy="beforeInteractive"
-        />
+        <ChatkitScript />
       </head>
       <body className="antialiased">{children}</body>
     </html>

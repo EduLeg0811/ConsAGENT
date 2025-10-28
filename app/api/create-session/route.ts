@@ -25,6 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
+      console.error("[create-session] Missing OPENAI_API_KEY env var");
       return new Response(
         JSON.stringify({
           error: "Missing OPENAI_API_KEY environment variable",
@@ -37,6 +38,9 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const parsedBody = await safeParseJson<CreateSessionRequestBody>(request);
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[create-session] parsed body", parsedBody);
+    }
     const { userId, sessionCookie: resolvedSessionCookie } =
       await resolveUserId(request);
     sessionCookie = resolvedSessionCookie;
@@ -47,6 +51,7 @@ export async function POST(request: Request): Promise<Response> {
       console.info("[create-session] handling request", {
         resolvedWorkflowId,
         body: JSON.stringify(parsedBody),
+        userId,
       });
     }
 
@@ -61,6 +66,19 @@ export async function POST(request: Request): Promise<Response> {
 
     const apiBase = process.env.CHATKIT_API_BASE ?? DEFAULT_CHATKIT_BASE;
     const url = `${apiBase}/v1/chatkit/sessions`;
+    const upstreamPayload = {
+      workflow: { id: resolvedWorkflowId },
+      user: userId,
+      chatkit_configuration: {
+        file_upload: {
+          enabled:
+            parsedBody?.chatkit_configuration?.file_upload?.enabled ?? false,
+        },
+      },
+    };
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[create-session] POST upstream", { url, upstreamPayload });
+    }
     const upstreamResponse = await fetch(url, {
       method: "POST",
       headers: {
@@ -68,16 +86,7 @@ export async function POST(request: Request): Promise<Response> {
         Authorization: `Bearer ${openaiApiKey}`,
         "OpenAI-Beta": "chatkit_beta=v1",
       },
-      body: JSON.stringify({
-        workflow: { id: resolvedWorkflowId },
-        user: userId,
-        chatkit_configuration: {
-          file_upload: {
-            enabled:
-              parsedBody?.chatkit_configuration?.file_upload?.enabled ?? false,
-          },
-        },
-      }),
+      body: JSON.stringify(upstreamPayload),
     });
 
     if (process.env.NODE_ENV !== "production") {
@@ -87,7 +96,20 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    const upstreamJson = (await upstreamResponse.json().catch(() => ({}))) as
+    const upstreamText = await upstreamResponse
+      .text()
+      .catch(() => "");
+    if (process.env.NODE_ENV !== "production") {
+      console.info("[create-session] upstream body preview", upstreamText.slice(0, 1600));
+    }
+    const upstreamJson = ((): Record<string, unknown> | undefined => {
+      try {
+        return upstreamText ? (JSON.parse(upstreamText) as Record<string, unknown>) : {};
+      } catch (e) {
+        console.error("[create-session] failed to parse upstream JSON", e);
+        return {};
+      }
+    })() as
       | Record<string, unknown>
       | undefined;
 
@@ -125,7 +147,7 @@ export async function POST(request: Request): Promise<Response> {
       sessionCookie
     );
   } catch (error) {
-    console.error("Create session error", error);
+    console.error("[create-session] Unexpected error", error);
     return buildJsonResponse(
       { error: "Unexpected error" },
       500,
